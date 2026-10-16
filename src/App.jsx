@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -18,12 +18,27 @@ import Button from "./components/ui/Button";
 import Modal from "./components/ui/Modal";
 import TaskForm from "./components/tasks/TaskForm";
 import TaskList from "./components/tasks/TaskList";
+import TaskFilters from "./components/tasks/TaskFilters";
 import { initialTasks } from "./data/initialTasks";
 import {
   createTask,
   getTasksDueToday,
   TASK_STATUSES,
 } from "./utils/taskHelpers";
+
+const initialFilters = {
+  search: "",
+  status: "all",
+  priority: "all",
+  category: "all",
+  sort: "newest",
+};
+
+const priorityRank = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
 
 function getFormattedDate() {
   return new Intl.DateTimeFormat("en", {
@@ -34,12 +49,75 @@ function getFormattedDate() {
   }).format(new Date());
 }
 
+function sortTasks(tasks, sort) {
+  const sorted = [...tasks];
+
+  switch (sort) {
+    case "oldest":
+      return sorted.sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+
+    case "dueDate":
+      return sorted.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return a.dueDate.localeCompare(b.dueDate);
+      });
+
+    case "priority":
+      return sorted.sort(
+        (a, b) =>
+          (priorityRank[b.priority] ?? 0) - (priorityRank[a.priority] ?? 0),
+      );
+
+    case "title":
+      return sorted.sort((a, b) => a.title.localeCompare(b.title));
+
+    case "newest":
+    default:
+      return sorted.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+  }
+}
+
 export default function App() {
   const [tasks, setTasks] = useState(initialTasks);
+  const [filters, setFilters] = useState(initialFilters);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [deletingTask, setDeletingTask] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+
+  const filteredTasks = useMemo(() => {
+    const normalizedSearch = filters.search.trim().toLowerCase();
+
+    const matchingTasks = tasks.filter((task) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        task.title.toLowerCase().includes(normalizedSearch) ||
+        (task.description ?? "").toLowerCase().includes(normalizedSearch);
+
+      const matchesStatus =
+        filters.status === "all" || task.status === filters.status;
+
+      const matchesPriority =
+        filters.priority === "all" || task.priority === filters.priority;
+
+      const matchesCategory =
+        filters.category === "all" || task.category === filters.category;
+
+      return (
+        matchesSearch && matchesStatus && matchesPriority && matchesCategory
+      );
+    });
+
+    return sortTasks(matchingTasks, filters.sort);
+  }, [tasks, filters]);
 
   const completedCount = tasks.filter(
     (task) => task.status === TASK_STATUSES.COMPLETED,
@@ -166,6 +244,10 @@ export default function App() {
     updateTaskStatus(task, nextStatus);
   }
 
+  function resetFilters() {
+    setFilters(initialFilters);
+  }
+
   return (
     <>
       <AppLayout onCreateTask={openCreateModal}>
@@ -251,7 +333,7 @@ export default function App() {
 
           <PageSection
             title="Manage your tasks"
-            description="Create, update status, edit, and remove your tasks."
+            description="Search, filter, sort, and manage your work in one place."
             action={
               <Button
                 size="sm"
@@ -262,14 +344,24 @@ export default function App() {
               </Button>
             }
           >
-            <TaskList
-              tasks={tasks}
-              onEdit={openEditModal}
-              onDelete={setDeletingTask}
-              onCreate={openCreateModal}
-              onToggleComplete={handleToggleComplete}
-              onStatusChange={updateTaskStatus}
-            />
+            <div className="space-y-4">
+              <TaskFilters
+                filters={filters}
+                onChange={setFilters}
+                onReset={resetFilters}
+                resultCount={filteredTasks.length}
+                totalCount={tasks.length}
+              />
+
+              <TaskList
+                tasks={filteredTasks}
+                onEdit={openEditModal}
+                onDelete={setDeletingTask}
+                onCreate={openCreateModal}
+                onToggleComplete={handleToggleComplete}
+                onStatusChange={updateTaskStatus}
+              />
+            </div>
           </PageSection>
 
           <PageSection
