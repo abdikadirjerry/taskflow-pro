@@ -130,6 +130,42 @@ export default function App() {
     setDeletingTask(null);
   }
 
+  function updateTaskStatus(task, nextStatus) {
+    if (!Object.values(TASK_STATUSES).includes(nextStatus)) return;
+
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) => {
+        if (currentTask.id !== task.id) return currentTask;
+
+        return {
+          ...currentTask,
+          status: nextStatus,
+          completedAt:
+            nextStatus === TASK_STATUSES.COMPLETED
+              ? (currentTask.completedAt ?? new Date().toISOString())
+              : null,
+        };
+      }),
+    );
+
+    const statusLabel = {
+      [TASK_STATUSES.TODO]: "To do",
+      [TASK_STATUSES.IN_PROGRESS]: "In progress",
+      [TASK_STATUSES.COMPLETED]: "Completed",
+    }[nextStatus];
+
+    setSuccessMessage(`"${task.title}" moved to ${statusLabel}.`);
+  }
+
+  function handleToggleComplete(task) {
+    const nextStatus =
+      task.status === TASK_STATUSES.COMPLETED
+        ? TASK_STATUSES.TODO
+        : TASK_STATUSES.COMPLETED;
+
+    updateTaskStatus(task, nextStatus);
+  }
+
   return (
     <>
       <AppLayout onCreateTask={openCreateModal}>
@@ -215,7 +251,7 @@ export default function App() {
 
           <PageSection
             title="Manage your tasks"
-            description="Create, edit, and remove tasks from your workspace."
+            description="Create, update status, edit, and remove your tasks."
             action={
               <Button
                 size="sm"
@@ -231,6 +267,8 @@ export default function App() {
               onEdit={openEditModal}
               onDelete={setDeletingTask}
               onCreate={openCreateModal}
+              onToggleComplete={handleToggleComplete}
+              onStatusChange={updateTaskStatus}
             />
           </PageSection>
 

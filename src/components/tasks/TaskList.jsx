@@ -2,7 +2,14 @@ import { ListTodo, Plus } from "lucide-react";
 import Button from "../ui/Button";
 import TaskCard from "./TaskCard";
 
-export default function TaskList({ tasks, onEdit, onDelete, onCreate }) {
+export default function TaskList({
+  tasks,
+  onEdit,
+  onDelete,
+  onCreate,
+  onToggleComplete,
+  onStatusChange,
+}) {
   if (tasks.length === 0) {
     return (
       <div className="flex flex-col items-center rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
@@ -38,6 +45,8 @@ export default function TaskList({ tasks, onEdit, onDelete, onCreate }) {
           task={task}
           onEdit={onEdit}
           onDelete={onDelete}
+          onToggleComplete={onToggleComplete}
+          onStatusChange={onStatusChange}
         />
       ))}
     </div>
