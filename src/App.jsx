@@ -20,6 +20,7 @@ import TaskForm from "./components/tasks/TaskForm";
 import TaskList from "./components/tasks/TaskList";
 import TaskFilters from "./components/tasks/TaskFilters";
 import { initialTasks } from "./data/initialTasks";
+import usePersistentTasks from "./hooks/usePersistentTasks";
 import {
   createTask,
   getTasksDueToday,
@@ -64,6 +65,7 @@ function sortTasks(tasks, sort) {
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
         if (!b.dueDate) return -1;
+
         return a.dueDate.localeCompare(b.dueDate);
       });
 
@@ -86,7 +88,7 @@ function sortTasks(tasks, sort) {
 }
 
 export default function App() {
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = usePersistentTasks(initialTasks);
   const [filters, setFilters] = useState(initialFilters);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
