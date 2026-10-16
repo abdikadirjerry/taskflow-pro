@@ -17,41 +17,13 @@ import PageSection from "./components/ui/PageSection";
 import Button from "./components/ui/Button";
 import Modal from "./components/ui/Modal";
 import TaskForm from "./components/tasks/TaskForm";
+import TaskList from "./components/tasks/TaskList";
 import { initialTasks } from "./data/initialTasks";
-import { createTask } from "./utils/taskHelpers";
-
-const dashboardStats = [
-  {
-    title: "Total tasks",
-    value: "12",
-    description: "Tasks in your workspace",
-    icon: ListTodo,
-    tone: "indigo",
-    progress: 75,
-  },
-  {
-    title: "Completed",
-    value: "04",
-    description: "Keep up the great work",
-    icon: CheckCircle2,
-    tone: "emerald",
-    change: { direction: "up", label: "33%" },
-  },
-  {
-    title: "In progress",
-    value: "08",
-    description: "Ready for your attention",
-    icon: Clock3,
-    tone: "amber",
-  },
-  {
-    title: "Due today",
-    value: "03",
-    description: "Make time for these",
-    icon: CalendarDays,
-    tone: "violet",
-  },
-];
+import {
+  createTask,
+  getTasksDueToday,
+  TASK_STATUSES,
+} from "./utils/taskHelpers";
 
 function getFormattedDate() {
   return new Intl.DateTimeFormat("en", {
@@ -65,7 +37,60 @@ function getFormattedDate() {
 export default function App() {
   const [tasks, setTasks] = useState(initialTasks);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [deletingTask, setDeletingTask] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+
+  const completedCount = tasks.filter(
+    (task) => task.status === TASK_STATUSES.COMPLETED,
+  ).length;
+
+  const inProgressCount = tasks.filter(
+    (task) => task.status === TASK_STATUSES.IN_PROGRESS,
+  ).length;
+
+  const dueTodayCount = getTasksDueToday(tasks).length;
+
+  const dashboardStats = [
+    {
+      title: "Total tasks",
+      value: String(tasks.length),
+      description: "Tasks in your workspace",
+      icon: ListTodo,
+      tone: "indigo",
+      progress: tasks.length
+        ? Math.round((completedCount / tasks.length) * 100)
+        : 0,
+    },
+    {
+      title: "Completed",
+      value: String(completedCount).padStart(2, "0"),
+      description: "Keep up the great work",
+      icon: CheckCircle2,
+      tone: "emerald",
+      change: { direction: "up", label: "Progress" },
+    },
+    {
+      title: "In progress",
+      value: String(inProgressCount).padStart(2, "0"),
+      description: "Ready for your attention",
+      icon: Clock3,
+      tone: "amber",
+    },
+    {
+      title: "Due today",
+      value: String(dueTodayCount).padStart(2, "0"),
+      description: "Uncompleted tasks due today",
+      icon: CalendarDays,
+      tone: "violet",
+    },
+  ];
+
+  function openCreateModal() {
+    setSuccessMessage("");
+    setEditingTask(null);
+    setIsCreateModalOpen(true);
+  }
 
   function handleCreateTask(taskInput) {
     const newTask = createTask(taskInput);
@@ -75,9 +100,34 @@ export default function App() {
     setSuccessMessage(`"${newTask.title}" was created successfully.`);
   }
 
-  function openCreateModal() {
+  function openEditModal(task) {
     setSuccessMessage("");
-    setIsCreateModalOpen(true);
+    setIsCreateModalOpen(false);
+    setEditingTask(task);
+  }
+
+  function handleUpdateTask(taskInput) {
+    if (!editingTask) return;
+
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === editingTask.id ? { ...task, ...taskInput } : task,
+      ),
+    );
+
+    setSuccessMessage(`"${taskInput.title}" was updated successfully.`);
+    setEditingTask(null);
+  }
+
+  function handleDeleteTask() {
+    if (!deletingTask) return;
+
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== deletingTask.id),
+    );
+
+    setSuccessMessage(`"${deletingTask.title}" was deleted.`);
+    setDeletingTask(null);
   }
 
   return (
@@ -146,8 +196,8 @@ export default function App() {
             description="A quick look at how your work is progressing."
             action={
               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-500">
-                <span className="size-2 rounded-full bg-amber-400" />
-                Preview data
+                <span className="size-2 rounded-full bg-emerald-400" />
+                Live task counts
               </span>
             }
           >
@@ -164,30 +214,32 @@ export default function App() {
           </div>
 
           <PageSection
+            title="Manage your tasks"
+            description="Create, edit, and remove tasks from your workspace."
+            action={
+              <Button
+                size="sm"
+                onClick={openCreateModal}
+                leftIcon={<Plus size={15} />}
+              >
+                New task
+              </Button>
+            }
+          >
+            <TaskList
+              tasks={tasks}
+              onEdit={openEditModal}
+              onDelete={setDeletingTask}
+              onCreate={openCreateModal}
+            />
+          </PageSection>
+
+          <PageSection
             title="Workspace activity"
             description="A snapshot of your recent work and updates."
           >
             <ActivityFeed />
           </PageSection>
-
-          <section className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-5 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-6">
-            <div>
-              <h2 className="text-sm font-bold text-ink-950">
-                Ready to make progress?
-              </h2>
-              <p className="mt-1 text-xs leading-5 text-ink-500">
-                You currently have {tasks.length} tasks in application state.
-              </p>
-            </div>
-
-            <Button
-              onClick={openCreateModal}
-              leftIcon={<Plus size={17} />}
-              className="self-start sm:self-auto"
-            >
-              Add a task
-            </Button>
-          </section>
         </div>
       </AppLayout>
 
@@ -201,7 +253,63 @@ export default function App() {
         <TaskForm
           onSubmit={handleCreateTask}
           onCancel={() => setIsCreateModalOpen(false)}
+          submitLabel="Create task"
         />
+      </Modal>
+
+      <Modal
+        open={Boolean(editingTask)}
+        onClose={() => setEditingTask(null)}
+        title="Edit task"
+        description="Update the details and keep your task information accurate."
+        size="lg"
+      >
+        {editingTask && (
+          <TaskForm
+            key={editingTask.id}
+            initialValues={{
+              title: editingTask.title,
+              description: editingTask.description ?? "",
+              priority: editingTask.priority,
+              category: editingTask.category,
+              dueDate: editingTask.dueDate ?? "",
+            }}
+            onSubmit={handleUpdateTask}
+            onCancel={() => setEditingTask(null)}
+            submitLabel="Save changes"
+          />
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(deletingTask)}
+        onClose={() => setDeletingTask(null)}
+        title="Delete this task?"
+        description="This action cannot be undone."
+        size="sm"
+      >
+        {deletingTask && (
+          <div>
+            <p className="break-words rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-800">
+              {deletingTask.title}
+            </p>
+
+            <p className="mt-3 text-sm leading-6 text-ink-500">
+              Are you sure you want to permanently remove this task from your
+              workspace?
+            </p>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="secondary" onClick={() => setDeletingTask(null)}>
+                Cancel
+              </Button>
+
+              <Button variant="danger" onClick={handleDeleteTask}>
+                Delete task
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );

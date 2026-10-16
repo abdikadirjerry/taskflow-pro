@@ -51,8 +51,17 @@ function getTodayDate() {
   return `${year}-${month}-${day}`;
 }
 
-export default function TaskForm({ onSubmit, onCancel }) {
-  const [form, setForm] = useState(initialForm);
+export default function TaskForm({
+  onSubmit,
+  onCancel,
+  initialValues,
+  submitLabel = "Create task",
+}) {
+  const [form, setForm] = useState(() => ({
+    ...initialForm,
+    ...initialValues,
+    dueDate: initialValues?.dueDate ?? "",
+  }));
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
 
@@ -114,7 +123,7 @@ export default function TaskForm({ onSubmit, onCancel }) {
         dueDate: form.dueDate || null,
       });
     } catch {
-      setSubmitError("We could not create your task. Please try again.");
+      setSubmitError("We could not save your task. Please try again.");
     }
   }
 
@@ -254,6 +263,12 @@ export default function TaskForm({ onSubmit, onCancel }) {
             );
           })}
         </div>
+
+        {errors.priority && (
+          <p role="alert" className="mt-1 text-xs text-rose-600">
+            {errors.priority}
+          </p>
+        )}
       </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -332,7 +347,7 @@ export default function TaskForm({ onSubmit, onCancel }) {
         </Button>
 
         <Button type="submit" leftIcon={<Check size={17} />}>
-          Create task
+          {submitLabel}
         </Button>
       </div>
     </form>
