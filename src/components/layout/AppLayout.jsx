@@ -3,12 +3,16 @@ import { CalendarDays, Sparkles } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
-export default function AppLayout({ children, onCreateTask }) {
-  const [activePage, setActivePage] = useState("Overview");
+export default function AppLayout({
+  children,
+  onCreateTask,
+  activePage,
+  onNavigate,
+}) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   function handleNavigate(page) {
-    setActivePage(page);
+    onNavigate(page);
     setSidebarOpen(false);
   }
 
@@ -42,7 +46,15 @@ export default function AppLayout({ children, onCreateTask }) {
               <p className="mt-2 text-sm leading-6 text-ink-500">
                 {activePage === "Overview"
                   ? "A little progress each day adds up to big results."
-                  : `Manage your ${activePage.toLowerCase()} in one place.`}
+                  : activePage === "Today"
+                    ? "Focus on deadlines that need your attention today."
+                    : activePage === "Upcoming"
+                      ? "Get ahead by reviewing your future deadlines."
+                      : activePage === "Settings"
+                        ? "Customize your productivity workspace."
+                        : activePage === "Help & Support"
+                          ? "Find help using your TaskFlow workspace."
+                          : "Review and organize all your tasks in one place."}
               </p>
             </div>
 

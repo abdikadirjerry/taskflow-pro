@@ -23,6 +23,7 @@ import { initialTasks } from "./data/initialTasks";
 import usePersistentTasks from "./hooks/usePersistentTasks";
 import {
   createTask,
+  getLocalDateString,
   getTasksDueToday,
   TASK_STATUSES,
 } from "./utils/taskHelpers";
@@ -35,11 +36,7 @@ const initialFilters = {
   sort: "newest",
 };
 
-const priorityRank = {
-  high: 3,
-  medium: 2,
-  low: 1,
-};
+const priorityRank = { high: 3, medium: 2, low: 1 };
 
 function getFormattedDate() {
   return new Intl.DateTimeFormat("en", {
@@ -65,7 +62,6 @@ function sortTasks(tasks, sort) {
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
         if (!b.dueDate) return -1;
-
         return a.dueDate.localeCompare(b.dueDate);
       });
 
@@ -89,16 +85,41 @@ function sortTasks(tasks, sort) {
 
 export default function App() {
   const [tasks, setTasks] = usePersistentTasks(initialTasks);
+  const [activePage, setActivePage] = useState("Overview");
   const [filters, setFilters] = useState(initialFilters);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [deletingTask, setDeletingTask] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
 
+  const today = getLocalDateString();
+
+  const pageTasks = useMemo(() => {
+    if (activePage === "Today") {
+      return tasks.filter(
+        (task) =>
+          task.status !== TASK_STATUSES.COMPLETED &&
+          task.dueDate &&
+          task.dueDate <= today,
+      );
+    }
+
+    if (activePage === "Upcoming") {
+      return tasks.filter(
+        (task) =>
+          task.status !== TASK_STATUSES.COMPLETED &&
+          task.dueDate &&
+          task.dueDate > today,
+      );
+    }
+
+    return tasks;
+  }, [tasks, activePage, today]);
+
   const filteredTasks = useMemo(() => {
     const normalizedSearch = filters.search.trim().toLowerCase();
 
-    const matchingTasks = tasks.filter((task) => {
+    const matchingTasks = pageTasks.filter((task) => {
       const matchesSearch =
         !normalizedSearch ||
         task.title.toLowerCase().includes(normalizedSearch) ||
@@ -119,7 +140,7 @@ export default function App() {
     });
 
     return sortTasks(matchingTasks, filters.sort);
-  }, [tasks, filters]);
+  }, [pageTasks, filters]);
 
   const completedCount = tasks.filter(
     (task) => task.status === TASK_STATUSES.COMPLETED,
@@ -165,6 +186,12 @@ export default function App() {
       tone: "violet",
     },
   ];
+
+  function navigateTo(page) {
+    setActivePage(page);
+    setFilters(initialFilters);
+    setSuccessMessage("");
+  }
 
   function openCreateModal() {
     setSuccessMessage("");
@@ -250,9 +277,15 @@ export default function App() {
     setFilters(initialFilters);
   }
 
+  const isTaskPage = ["All Tasks", "Today", "Upcoming"].includes(activePage);
+
   return (
     <>
-      <AppLayout onCreateTask={openCreateModal}>
+      <AppLayout
+        activePage={activePage}
+        onNavigate={navigateTo}
+        onCreateTask={openCreateModal}
+      >
         <div className="space-y-8">
           {successMessage && (
             <div
@@ -275,103 +308,194 @@ export default function App() {
             </div>
           )}
 
-          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-brand-600 to-violet-700 p-6 text-white shadow-xl shadow-indigo-200/40 sm:p-8 lg:p-9">
-            <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full border-[40px] border-white/5" />
-            <div className="pointer-events-none absolute -bottom-32 right-36 size-64 rounded-full bg-white/5 blur-2xl" />
+          {activePage === "Overview" && (
+            <>
+              <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-brand-600 to-violet-700 p-6 text-white shadow-xl shadow-indigo-200/40 sm:p-8 lg:p-9">
+                <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full border-[40px] border-white/5" />
+                <div className="pointer-events-none absolute -bottom-32 right-36 size-64 rounded-full bg-white/5 blur-2xl" />
 
-            <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-              <div className="max-w-2xl">
-                <div className="flex items-center gap-2 text-xs font-medium text-indigo-100">
-                  <CalendarDays size={15} />
-                  {getFormattedDate()}
+                <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+                  <div className="max-w-2xl">
+                    <div className="flex items-center gap-2 text-xs font-medium text-indigo-100">
+                      <CalendarDays size={15} />
+                      {getFormattedDate()}
+                    </div>
+
+                    <h2 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+                      Make today
+                      <br className="sm:hidden" /> count.
+                    </h2>
+
+                    <p className="mt-3 max-w-lg text-sm leading-7 text-indigo-100">
+                      Plan your priorities, focus on meaningful work, and turn
+                      your goals into progress — one task at a time.
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={openCreateModal}
+                    variant="secondary"
+                    size="lg"
+                    leftIcon={<Plus size={18} />}
+                    rightIcon={<Sparkles size={15} />}
+                    className="relative self-start border-transparent text-brand-700 lg:self-auto"
+                  >
+                    Create a task
+                  </Button>
                 </div>
+              </section>
 
-                <h2 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-                  Make today
-                  <br className="sm:hidden" /> count.
-                </h2>
+              <PageSection
+                eyebrow="YOUR PROGRESS"
+                title="Productivity at a glance"
+                description="A quick look at how your work is progressing."
+                action={
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-500">
+                    <span className="size-2 rounded-full bg-emerald-400" />
+                    Live task counts
+                  </span>
+                }
+              >
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {dashboardStats.map((stat) => (
+                    <StatCard key={stat.title} {...stat} />
+                  ))}
+                </div>
+              </PageSection>
 
-                <p className="mt-3 max-w-lg text-sm leading-7 text-indigo-100">
-                  Plan your priorities, focus on meaningful work, and turn your
-                  goals into progress — one task at a time.
-                </p>
+              <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)]">
+                <WeeklyChart />
+                <PriorityBreakdown />
               </div>
 
-              <Button
-                onClick={openCreateModal}
-                variant="secondary"
-                size="lg"
-                leftIcon={<Plus size={18} />}
-                rightIcon={<Sparkles size={15} />}
-                className="relative self-start border-transparent text-brand-700 lg:self-auto"
+              <PageSection
+                title="Recent tasks"
+                description="A quick look at tasks in your workspace."
+                action={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigateTo("All Tasks")}
+                  >
+                    View all tasks
+                  </Button>
+                }
               >
-                Create a task
-              </Button>
-            </div>
-          </section>
+                <div className="space-y-4">
+                  <TaskFilters
+                    filters={filters}
+                    onChange={setFilters}
+                    onReset={resetFilters}
+                    resultCount={filteredTasks.length}
+                    totalCount={pageTasks.length}
+                  />
 
-          <PageSection
-            eyebrow="YOUR PROGRESS"
-            title="Productivity at a glance"
-            description="A quick look at how your work is progressing."
-            action={
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-500">
-                <span className="size-2 rounded-full bg-emerald-400" />
-                Live task counts
-              </span>
-            }
-          >
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {dashboardStats.map((stat) => (
-                <StatCard key={stat.title} {...stat} />
-              ))}
-            </div>
-          </PageSection>
+                  <TaskList
+                    tasks={filteredTasks.slice(0, 5)}
+                    onEdit={openEditModal}
+                    onDelete={setDeletingTask}
+                    onCreate={openCreateModal}
+                    onToggleComplete={handleToggleComplete}
+                    onStatusChange={updateTaskStatus}
+                  />
+                </div>
+              </PageSection>
 
-          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)]">
-            <WeeklyChart />
-            <PriorityBreakdown />
-          </div>
-
-          <PageSection
-            title="Manage your tasks"
-            description="Search, filter, sort, and manage your work in one place."
-            action={
-              <Button
-                size="sm"
-                onClick={openCreateModal}
-                leftIcon={<Plus size={15} />}
+              <PageSection
+                title="Workspace activity"
+                description="A snapshot of your recent work and updates."
               >
-                New task
+                <ActivityFeed />
+              </PageSection>
+            </>
+          )}
+
+          {isTaskPage && (
+            <PageSection
+              eyebrow={
+                activePage === "Today"
+                  ? "DAILY FOCUS"
+                  : activePage === "Upcoming"
+                    ? "PLAN AHEAD"
+                    : "YOUR WORKSPACE"
+              }
+              title={
+                activePage === "Today"
+                  ? "Today's focus"
+                  : activePage === "Upcoming"
+                    ? "Coming up next"
+                    : "All your tasks"
+              }
+              description={
+                activePage === "Today"
+                  ? "Overdue and due-today tasks that still need attention."
+                  : activePage === "Upcoming"
+                    ? "Your unfinished tasks with future deadlines."
+                    : "Search, filter, sort, and manage every task."
+              }
+              action={
+                <Button
+                  onClick={openCreateModal}
+                  size="sm"
+                  leftIcon={<Plus size={15} />}
+                >
+                  New task
+                </Button>
+              }
+            >
+              <div className="space-y-4">
+                <TaskFilters
+                  filters={filters}
+                  onChange={setFilters}
+                  onReset={resetFilters}
+                  resultCount={filteredTasks.length}
+                  totalCount={pageTasks.length}
+                />
+
+                <TaskList
+                  tasks={filteredTasks}
+                  onEdit={openEditModal}
+                  onDelete={setDeletingTask}
+                  onCreate={openCreateModal}
+                  onToggleComplete={handleToggleComplete}
+                  onStatusChange={updateTaskStatus}
+                />
+              </div>
+            </PageSection>
+          )}
+
+          {activePage === "Settings" && (
+            <section className="rounded-2xl border border-line bg-white p-8 text-center shadow-card">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-indigo-50 text-brand-600">
+                <Sparkles size={22} />
+              </div>
+              <h2 className="mt-4 text-lg font-bold text-ink-950">
+                Workspace settings
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-500">
+                Your settings page will be available in a later feature. Your
+                tasks are already saved automatically in this browser.
+              </p>
+            </section>
+          )}
+
+          {activePage === "Help & Support" && (
+            <section className="rounded-2xl border border-line bg-white p-8 text-center shadow-card">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-indigo-50 text-brand-600">
+                <CheckCircle2 size={22} />
+              </div>
+              <h2 className="mt-4 text-lg font-bold text-ink-950">
+                Welcome to TaskFlow Pro
+              </h2>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-500">
+                Create tasks, set priorities and deadlines, track completion,
+                and use search and filters to stay organized.
+              </p>
+              <Button className="mt-5" onClick={() => navigateTo("All Tasks")}>
+                Explore your tasks
               </Button>
-            }
-          >
-            <div className="space-y-4">
-              <TaskFilters
-                filters={filters}
-                onChange={setFilters}
-                onReset={resetFilters}
-                resultCount={filteredTasks.length}
-                totalCount={tasks.length}
-              />
-
-              <TaskList
-                tasks={filteredTasks}
-                onEdit={openEditModal}
-                onDelete={setDeletingTask}
-                onCreate={openCreateModal}
-                onToggleComplete={handleToggleComplete}
-                onStatusChange={updateTaskStatus}
-              />
-            </div>
-          </PageSection>
-
-          <PageSection
-            title="Workspace activity"
-            description="A snapshot of your recent work and updates."
-          >
-            <ActivityFeed />
-          </PageSection>
+            </section>
+          )}
         </div>
       </AppLayout>
 
