@@ -75,6 +75,24 @@ function formatTimestamp(timestamp) {
   }).format(date);
 }
 
+function IconAction({ label, title, onClick, children, danger = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={title}
+      className={`inline-flex size-10 items-center justify-center rounded-xl transition focus-visible:outline-none focus-visible:ring-4 ${
+        danger
+          ? "text-slate-400 hover:bg-rose-50 hover:text-rose-600 focus-visible:ring-rose-500/20"
+          : "text-slate-400 hover:bg-indigo-50 hover:text-brand-600 focus-visible:ring-brand-500/20"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function TaskCard({
   task,
   onEdit,
@@ -101,7 +119,7 @@ export default function TaskCard({
   return (
     <>
       <article
-        className={`rounded-2xl border bg-white p-4 shadow-card transition hover:shadow-md sm:p-5 ${
+        className={`min-w-0 rounded-2xl border bg-white p-4 shadow-card transition hover:shadow-md sm:p-5 ${
           deadlineStatus === "overdue"
             ? "border-rose-200"
             : isCompleted
@@ -109,7 +127,7 @@ export default function TaskCard({
               : "border-line hover:border-indigo-200"
         }`}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={() => onToggleComplete(task)}
@@ -120,21 +138,21 @@ export default function TaskCard({
             }
             aria-pressed={isCompleted}
             title={isCompleted ? "Mark as not completed" : "Mark as completed"}
-            className={`mt-1 flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 ${
+            className={`mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full border-2 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 ${
               isCompleted
                 ? "border-emerald-500 bg-emerald-500 text-white"
                 : "border-slate-300 text-transparent hover:border-brand-500 hover:text-brand-500"
             }`}
           >
-            <Check size={14} strokeWidth={3} />
+            <Check size={14} strokeWidth={3} aria-hidden="true" />
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setDetailsOpen(true)}
-                className={`break-words text-left text-sm font-bold hover:text-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                className={`min-w-0 break-words text-left text-sm font-bold transition hover:text-brand-700 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   isCompleted ? "text-ink-500 line-through" : "text-ink-950"
                 }`}
               >
@@ -148,7 +166,7 @@ export default function TaskCard({
 
             {task.description && (
               <p
-                className={`mt-2 line-clamp-2 text-xs leading-5 ${
+                className={`mt-2 break-words text-xs leading-5 ${
                   isCompleted ? "text-slate-400" : "text-ink-500"
                 }`}
               >
@@ -167,7 +185,7 @@ export default function TaskCard({
               </span>
 
               <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-ink-500">
-                {task.category}
+                {task.category || "Uncategorized"}
               </span>
 
               <span
@@ -175,7 +193,7 @@ export default function TaskCard({
                   deadlineStyles[deadlineStatus]
                 }`}
               >
-                <CalendarDays size={12} />
+                <CalendarDays size={12} aria-hidden="true" />
                 {dueDateText}
               </span>
             </div>
@@ -183,54 +201,49 @@ export default function TaskCard({
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-400">
               {createdDate && (
                 <span className="inline-flex items-center gap-1">
-                  <History size={11} />
+                  <History size={11} aria-hidden="true" />
                   Created {createdDate}
                 </span>
               )}
 
               {isCompleted && completedDate && (
                 <span className="inline-flex items-center gap-1 text-emerald-700">
-                  <CheckCircle2 size={11} />
+                  <CheckCircle2 size={11} aria-hidden="true" />
                   Completed {completedDate}
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setDetailsOpen(true)}
-              aria-label={`View details for ${task.title}`}
+          <div className="flex shrink-0 flex-wrap items-center gap-0.5">
+            <IconAction
+              label={`View details for ${task.title}`}
               title="View details"
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-indigo-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              onClick={() => setDetailsOpen(true)}
             >
-              <Eye size={16} />
-            </button>
+              <Eye size={16} aria-hidden="true" />
+            </IconAction>
 
-            <button
-              type="button"
-              onClick={() => onEdit(task)}
-              aria-label={`Edit ${task.title}`}
+            <IconAction
+              label={`Edit ${task.title}`}
               title="Edit task"
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-indigo-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              onClick={() => onEdit(task)}
             >
-              <Edit3 size={16} />
-            </button>
+              <Edit3 size={16} aria-hidden="true" />
+            </IconAction>
 
-            <button
-              type="button"
-              onClick={() => onDelete(task)}
-              aria-label={`Delete ${task.title}`}
+            <IconAction
+              label={`Delete ${task.title}`}
               title="Delete task"
-              className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+              onClick={() => onDelete(task)}
+              danger
             >
-              <Trash2 size={16} />
-            </button>
+              <Trash2 size={16} aria-hidden="true" />
+            </IconAction>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-2 border-t border-line/80 pt-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4 flex flex-col gap-3 border-t border-line/80 pt-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-ink-500">
             {isCompleted ? (
               <CheckCircle2 size={14} className="text-emerald-600" />
@@ -256,7 +269,7 @@ export default function TaskCard({
               aria-label={`Change status for ${task.title}`}
               value={task.status}
               onChange={(event) => onStatusChange(task, event.target.value)}
-              className="max-w-full rounded-lg border border-line bg-white px-2.5 py-2 text-xs font-semibold text-ink-800 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
+              className="min-h-10 max-w-full rounded-lg border border-line bg-white px-2.5 py-2 text-xs font-semibold text-ink-800 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
             >
               <option value={TASK_STATUSES.TODO}>To do</option>
               <option value={TASK_STATUSES.IN_PROGRESS}>In progress</option>
