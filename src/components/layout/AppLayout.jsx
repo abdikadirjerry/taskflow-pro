@@ -8,6 +8,7 @@ export default function AppLayout({
   onCreateTask,
   activePage,
   onNavigate,
+  displayName = "there",
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -15,6 +16,15 @@ export default function AppLayout({
     onNavigate(page);
     setSidebarOpen(false);
   }
+
+  const pageDescription = {
+    Overview: "A little progress each day adds up to big results.",
+    "All Tasks": "Review and organize all your tasks in one place.",
+    Today: "Focus on deadlines that need your attention today.",
+    Upcoming: "Get ahead by reviewing your future deadlines.",
+    Settings: "Customize your productivity workspace.",
+    "Help & Support": "Find help using your TaskFlow workspace.",
+  };
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -40,21 +50,14 @@ export default function AppLayout({
               </div>
 
               <h1 className="text-2xl font-extrabold tracking-tight text-ink-950 sm:text-3xl">
-                {activePage === "Overview" ? "Good to see you!" : activePage}
+                {activePage === "Overview"
+                  ? `Good to see you${displayName.trim() ? `, ${displayName.trim()}` : ""}!`
+                  : activePage}
               </h1>
 
               <p className="mt-2 text-sm leading-6 text-ink-500">
-                {activePage === "Overview"
-                  ? "A little progress each day adds up to big results."
-                  : activePage === "Today"
-                    ? "Focus on deadlines that need your attention today."
-                    : activePage === "Upcoming"
-                      ? "Get ahead by reviewing your future deadlines."
-                      : activePage === "Settings"
-                        ? "Customize your productivity workspace."
-                        : activePage === "Help & Support"
-                          ? "Find help using your TaskFlow workspace."
-                          : "Review and organize all your tasks in one place."}
+                {pageDescription[activePage] ??
+                  "Manage your productivity workspace."}
               </p>
             </div>
 

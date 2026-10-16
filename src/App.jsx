@@ -19,8 +19,12 @@ import Modal from "./components/ui/Modal";
 import TaskForm from "./components/tasks/TaskForm";
 import TaskList from "./components/tasks/TaskList";
 import TaskFilters from "./components/tasks/TaskFilters";
+import SettingsPanel from "./components/settings/SettingsPanel";
 import { initialTasks } from "./data/initialTasks";
 import usePersistentTasks from "./hooks/usePersistentTasks";
+import usePersistentSettings, {
+  DEFAULT_SETTINGS,
+} from "./hooks/usePersistentSettings";
 import {
   createTask,
   getLocalDateString,
@@ -85,7 +89,8 @@ function sortTasks(tasks, sort) {
 
 export default function App() {
   const [tasks, setTasks] = usePersistentTasks(initialTasks);
-  const [activePage, setActivePage] = useState("Overview");
+  const [settings, setSettings] = usePersistentSettings();
+  const [activePage, setActivePage] = useState(() => settings.defaultView);
   const [filters, setFilters] = useState(initialFilters);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -95,8 +100,14 @@ export default function App() {
   const today = getLocalDateString();
 
   const pageTasks = useMemo(() => {
+    let result = tasks;
+
+    if (!settings.showCompletedTasks) {
+      result = result.filter((task) => task.status !== TASK_STATUSES.COMPLETED);
+    }
+
     if (activePage === "Today") {
-      return tasks.filter(
+      return result.filter(
         (task) =>
           task.status !== TASK_STATUSES.COMPLETED &&
           task.dueDate &&
@@ -105,7 +116,7 @@ export default function App() {
     }
 
     if (activePage === "Upcoming") {
-      return tasks.filter(
+      return result.filter(
         (task) =>
           task.status !== TASK_STATUSES.COMPLETED &&
           task.dueDate &&
@@ -113,8 +124,8 @@ export default function App() {
       );
     }
 
-    return tasks;
-  }, [tasks, activePage, today]);
+    return result;
+  }, [tasks, activePage, today, settings.showCompletedTasks]);
 
   const filteredTasks = useMemo(() => {
     const normalizedSearch = filters.search.trim().toLowerCase();
@@ -201,7 +212,6 @@ export default function App() {
 
   function handleCreateTask(taskInput) {
     const newTask = createTask(taskInput);
-
     setTasks((currentTasks) => [newTask, ...currentTasks]);
     setIsCreateModalOpen(false);
     setSuccessMessage(`"${newTask.title}" was created successfully.`);
@@ -277,6 +287,13 @@ export default function App() {
     setFilters(initialFilters);
   }
 
+  function resetSettings() {
+    setSettings({ ...DEFAULT_SETTINGS });
+    setActivePage(DEFAULT_SETTINGS.defaultView);
+    setFilters(initialFilters);
+    setSuccessMessage("Your preferences have been reset.");
+  }
+
   const isTaskPage = ["All Tasks", "Today", "Upcoming"].includes(activePage);
 
   return (
@@ -285,6 +302,7 @@ export default function App() {
         activePage={activePage}
         onNavigate={navigateTo}
         onCreateTask={openCreateModal}
+        displayName={settings.displayName}
       >
         <div className="space-y-8">
           {successMessage && (
@@ -465,18 +483,11 @@ export default function App() {
           )}
 
           {activePage === "Settings" && (
-            <section className="rounded-2xl border border-line bg-white p-8 text-center shadow-card">
-              <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-indigo-50 text-brand-600">
-                <Sparkles size={22} />
-              </div>
-              <h2 className="mt-4 text-lg font-bold text-ink-950">
-                Workspace settings
-              </h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-500">
-                Your settings page will be available in a later feature. Your
-                tasks are already saved automatically in this browser.
-              </p>
-            </section>
+            <SettingsPanel
+              settings={settings}
+              onChange={setSettings}
+              onReset={resetSettings}
+            />
           )}
 
           {activePage === "Help & Support" && (
