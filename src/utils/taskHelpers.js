@@ -49,10 +49,25 @@ export function isTaskCompleted(task) {
   return task.status === TASK_STATUSES.COMPLETED;
 }
 
+export function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+export function getTaskDeadlineStatus(task, today = getLocalDateString()) {
+  if (!task.dueDate) return "no-date";
+  if (task.status === TASK_STATUSES.COMPLETED) return "completed";
+  if (task.dueDate < today) return "overdue";
+  if (task.dueDate === today) return "today";
+
+  return "upcoming";
+}
+
 export function getTaskProgress(tasks) {
-  if (tasks.length === 0) {
-    return 0;
-  }
+  if (tasks.length === 0) return 0;
 
   const completedCount = tasks.filter(isTaskCompleted).length;
 
@@ -60,14 +75,20 @@ export function getTaskProgress(tasks) {
 }
 
 export function getTasksDueToday(tasks) {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  const todayString = `${year}-${month}-${day}`;
+  const today = getLocalDateString();
+
+  return tasks.filter(
+    (task) => task.dueDate === today && task.status !== TASK_STATUSES.COMPLETED,
+  );
+}
+
+export function getOverdueTasks(tasks) {
+  const today = getLocalDateString();
 
   return tasks.filter(
     (task) =>
-      task.dueDate === todayString && task.status !== TASK_STATUSES.COMPLETED,
+      task.dueDate &&
+      task.dueDate < today &&
+      task.status !== TASK_STATUSES.COMPLETED,
   );
 }

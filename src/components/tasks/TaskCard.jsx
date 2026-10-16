@@ -5,10 +5,11 @@ import {
   Clock3,
   Edit3,
   Flag,
+  History,
   Trash2,
 } from "lucide-react";
 import Badge from "../ui/Badge";
-import { TASK_STATUSES } from "../../utils/taskHelpers";
+import { TASK_STATUSES, getTaskDeadlineStatus } from "../../utils/taskHelpers";
 
 const priorityStyles = {
   low: "bg-emerald-50 text-emerald-700",
@@ -28,8 +29,24 @@ const statusStyles = {
   [TASK_STATUSES.COMPLETED]: "success",
 };
 
-function formatDueDate(dateString) {
-  if (!dateString) return "No due date";
+const deadlineStyles = {
+  overdue: "border-rose-200 bg-rose-50 text-rose-700",
+  today: "border-amber-200 bg-amber-50 text-amber-800",
+  upcoming: "border-slate-200 bg-slate-50 text-slate-600",
+  "no-date": "border-slate-200 bg-slate-50 text-slate-500",
+  completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
+};
+
+const deadlineLabels = {
+  overdue: "Overdue",
+  today: "Due today",
+  upcoming: "Upcoming",
+  "no-date": "No due date",
+  completed: "Deadline met",
+};
+
+function formatDate(dateString) {
+  if (!dateString) return null;
 
   const date = new Date(`${dateString}T12:00:00`);
 
@@ -37,6 +54,19 @@ function formatDueDate(dateString) {
     month: "short",
     day: "numeric",
     year: "numeric",
+  }).format(date);
+}
+
+function formatTimestamp(timestamp) {
+  if (!timestamp) return null;
+
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
   }).format(date);
 }
 
@@ -48,11 +78,27 @@ export default function TaskCard({
   onStatusChange,
 }) {
   const isCompleted = task.status === TASK_STATUSES.COMPLETED;
+  const deadlineStatus = getTaskDeadlineStatus(task);
+  const createdDate = formatTimestamp(task.createdAt);
+  const completedDate = formatTimestamp(task.completedAt);
+
+  const dueDateText =
+    deadlineStatus === "overdue"
+      ? `Overdue · ${formatDate(task.dueDate)}`
+      : deadlineStatus === "today"
+        ? `Today · ${formatDate(task.dueDate)}`
+        : deadlineStatus === "no-date"
+          ? "No due date"
+          : formatDate(task.dueDate);
 
   return (
     <article
-      className={`rounded-2xl border bg-white p-4 shadow-card transition hover:border-indigo-200 hover:shadow-md sm:p-5 ${
-        isCompleted ? "border-emerald-100 bg-emerald-50/20" : "border-line"
+      className={`rounded-2xl border bg-white p-4 shadow-card transition hover:shadow-md sm:p-5 ${
+        deadlineStatus === "overdue"
+          ? "border-rose-200"
+          : isCompleted
+            ? "border-emerald-100 bg-emerald-50/20"
+            : "border-line hover:border-indigo-200"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -110,14 +156,34 @@ export default function TaskCard({
               {task.priority} priority
             </span>
 
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-ink-500">
+            <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-ink-500">
               {task.category}
             </span>
 
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-ink-500">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                deadlineStyles[deadlineStatus]
+              }`}
+            >
               <CalendarDays size={12} />
-              {formatDueDate(task.dueDate)}
+              {dueDateText}
             </span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-400">
+            {createdDate && (
+              <span className="inline-flex items-center gap-1">
+                <History size={11} />
+                Created {createdDate}
+              </span>
+            )}
+
+            {isCompleted && completedDate && (
+              <span className="inline-flex items-center gap-1 text-emerald-700">
+                <CheckCircle2 size={11} />
+                Completed {completedDate}
+              </span>
+            )}
           </div>
         </div>
 
@@ -148,10 +214,16 @@ export default function TaskCard({
         <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-ink-500">
           {isCompleted ? (
             <CheckCircle2 size={14} className="text-emerald-600" />
+          ) : deadlineStatus === "overdue" ? (
+            <Flag size={14} className="text-rose-600" />
           ) : (
             <Clock3 size={14} />
           )}
-          {isCompleted ? "Nice work — task completed" : "Update task status"}
+          {isCompleted
+            ? "Nice work — task completed"
+            : deadlineStatus === "overdue"
+              ? "This task needs attention"
+              : deadlineLabels[deadlineStatus]}
         </span>
 
         <label className="flex items-center gap-2">
